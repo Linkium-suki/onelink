@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+.dev.vars
+.admin-secret.txt
+worker-configuration.d.ts
+dist/
+.mimosa/
+*.log

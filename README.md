@@ -1,16 +1,16 @@
-# OneLink - Share Everything With One Link
+# OneLink 2.0 — Share Everything With One Link
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Linkium-suki/onelink/436bc09ab8cca21d93f00759d7f94932bfd0ab4d/public/logo.svg" alt="OneLink Logo" width="128" height="128">
+  <img src="public/logo.svg" alt="OneLink Logo" width="128" height="128">
 </p>
 
-<h3 align="center">一个功能强大、美观、完全免费的“万物分享”服务，100% 运行在 Cloudflare 的免费生态之上。</h3>
+<h3 align="center">一个功能强大、美观、完全免费的"万物分享"服务，100% 运行在 Cloudflare 的免费生态之上。</h3>
 
 <p align="center">
     <a href="https://1url.icu">
         <img src="https://img.shields.io/badge/Live%20Demo-Visit%20Now-brightgreen" alt="Live Demo">
     </a>
-    <a href="#">
+    <a href="LICENSE">
         <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
     </a>
     <a href="https://www.cloudflare.com">
@@ -20,120 +20,161 @@
 
 ---
 
-## ✨ 项目简介
+## 🔄 全新重制说明（v2.0）
 
-**OneLink** 不仅仅是一个短链服务。它的诞生是为了实现一个简单的 Slogan: **"Share everything with one link"**。无论是长链接、临时文件，还是 Markdown 格式的笔记、代码片段，你都可以通过 OneLink 生成一个简洁的短链接进行分享。
+本版本是 [OneLink 1.x](https://github.com/Linkium-suki/onelink) 的**全新重制**：推翻旧的 Cloudflare Pages 架构，代码与 UI 全部重写，迁移到 Cloudflare 官方推荐的新项目架构 **Workers + Workers Static Assets**。
 
-最酷的是，整个项目被设计为**完全运行在 Cloudflare 的免费套餐**上，利用 Workers, Pages, R2, KV 和 Turnstile，为你提供了一个零成本、高性能、高可用的企业级分享解决方案。
+| | 1.x（旧版） | 2.0（本版） |
+| :--- | :--- | :--- |
+| 架构 | Cloudflare Pages + Pages Functions | **Cloudflare Workers + Static Assets**（单一部署单元） |
+| 后端 | 单文件 `_middleware.ts` | **Hono** 路由 + 模块化 TypeScript（strict 模式） |
+| 前端 | 原生 HTML/CSS/JS | **React 19 + Vite + TypeScript**（`@cloudflare/vite-plugin` 官方集成，HMR 热更新） |
+| 部署 | Git 集成 / `wrangler pages deploy` | `npm run deploy`（一条命令：类型检查 → 构建 → 部署） |
+| 配置 | Dashboard 手填绑定 | `wrangler.jsonc` 声明式配置 |
 
+**安全修复**（旧版存在的问题）：
 
----
+- 🔒 **消息页 XSS**：旧版把用户内容直接拼进 `<script>` 模板字符串并可被 `</script>` 逃逸，Markdown 渲染结果也未消毒。新版通过 `<script type="application/json">` 安全传参 + **DOMPurify** 消毒。
+- 🔒 **文件名 XSS**：下载/预览页直接内插文件名。新版全部 HTML 转义。
+- 🔒 **密码走 GET**：旧版密码出现在 URL 查询参数里（进浏览器历史、访问日志）。新版密码改用 **POST** 表单提交，并做恒定时间比较。
+- 🔒 **自定义短代码无校验**：旧版接受任意字符（含 `/`、`..`、HTML）。新版白名单校验 + 保留字（`api`、`admin`、`index`…）拦截。
+- 🔒 **安全响应头**：所有动态页面带 CSP、`nosniff`、`frame-ancestors 'none'`；静态资源带 `_headers` 安全头。
 
-## 🚀 功能亮点
+**新增能力**：
 
-我们在这个项目中实现了超过20个精心设计的功能：
+- 🎬 视频播放支持 **HTTP Range 分段请求**（可拖进度条，不用整段下载）
+- 📥 修复旧版 Bug：文本类文件（.md/.txt…）带 `?download=true` 不会下载、只会再渲染一遍预览 → 现在**下载永远优先**
+- 🛡️ 非管理员创建接口 **IP 速率限制**（20 次/小时，KV 实现）
+- 🧹 **管理员 API**：查询与删除任意分享（见下文）
+- 🚫 品牌化 404 页（旧版未知路径直接白屏）
+- ⏱️ 有效期新增 **1 小时** 档位
+- 🖱️ 前端：**Metro 风格全新 UI（蓝/橙配色，扁平直角 + 磁贴式 Tabs）**、**拖拽上传 + 实时上传进度条**、深浅色主题记忆、Turnstile 站点密钥改为服务端下发（`/api/config`），不再硬编码
 
-#### 核心与分享功能
-- ✅ **多类型分享**: 短链接、临时文件、Markdown 消息。
-- ✅ **临时文件**: 文件上传到 R2，24小时后自动删除，保护隐私。
-- ✅ **自定义短代码**: 创建时可指定你喜欢的短代码。
-- ✅ **密码保护**: 为你的分享链接设置访问密码。
-- ✅ **阅后即焚**: 创建一次性链接，访问后立即销毁。
-- ✅ **自定义有效期**: 可为链接设置1天、7天、30天或永久的有效期。
-
-#### 预览与体验
-- ✅ **智能在线预览**:
-  - 🖼️ **图片**: 直接在浏览器中打开。
-  - 🎬 **视频/音频**: 使用美观的内嵌播放器预览。
-  - 📄 **PDF**: 直接在浏览器中查看。
-  - ✍️ **Markdown/纯文本/代码**: 以格式化和语法高亮的形式在线阅读，并提供下载按钮。
-- ✅ **安全跳转页**: 访问短链接时，会有一个3秒倒计时的安全提示页面，防止恶意跳转。
-- ✅ **二维码生成**: 成功创建分享后，自动生成二维码方便移动端分享。
-- ✅ **一键复制**: 轻松复制生成的短链接。
-
-#### 设计与用户体验
-- ✅ **Material Design 3**: 现代、美观的设计语言。
-- ✅ **深色/浅色模式**: 自动适配系统，并可手动切换。
-- ✅ **完全响应式**: 完美适配桌面、平板和移动端。
-- ✅ **统一品牌页脚**: 所有页面（包括主页、预览页、跳转页）都拥有统一、精美的页脚设计。
-
-#### 安全与管理
-- ✅ **Cloudflare Turnstile**: 无感、尊重隐私的人机验证，有效防止机器人滥用。
-- ✅ **管理员后台**: 通过 `ADMIN_SECRET`，你可以使用 API 或其他工具创建永久性的、无限制的分享。
-- ✅ **详细访问统计**: 在短链接后加 `+` (例如 `s.xxxx.com/xyz+`)，即可查看该链接的访问次数、访问时间和来源国家。
+原有全部功能（三种分享类型、密码、阅后即焚、自定义短代码、有效期、二维码、`code+` 统计、Turnstile、管理员免验证）全部保留。
 
 ---
 
 ## 🛠️ 技术栈
 
-本项目是 Cloudflare Serverless 生态的一个完美实践范例：
-
-| 服务 | 角色 |
+| 服务 / 组件 | 角色 |
 | :--- | :--- |
-| **Cloudflare Pages** | 托管前端静态资源 (`/public`) 并运行后端逻辑 (`/functions`) |
-| **Cloudflare Workers** | 作为 Pages Functions 的底层技术，处理所有 API 和动态请求 |
-| **Cloudflare KV** | 存储短链接的元数据（目标地址、密码、有效期等） |
-| **Cloudflare R2** | 存储用户上传的临时文件 |
-| **Cloudflare Turnstile**| 提供免费、强大的人机验证服务 |
+| **Cloudflare Workers + Static Assets** | 托管前端构建产物并运行后端 API |
+| **Cloudflare KV** | 存储分享元数据（目标地址、密码、有效期、访问历史） |
+| **Cloudflare R2** | 存储上传的临时文件 |
+| **Cloudflare Turnstile** | 免费、无感的人机验证 |
+| **React 19 + Vite** | 前端框架与构建工具（`@cloudflare/vite-plugin` 打通本地全栈开发） |
+| **Hono** | 轻量后端路由框架 |
+| **TypeScript (strict)** | 全量类型安全 |
 
 ---
 
-## 部署指南
-
-你可以通过以下步骤，在5分钟内拥有一个属于你自己的 OneLink 服务。
+## 🚀 部署指南
 
 ### 前提条件
-1.  一个 Cloudflare 账户。
-2.  一个你自己的域名，并已将其 NS 记录指向 Cloudflare。
-3.  一个 GitHub 账户。
-4.  本地安装了 `Node.js` 和 `Git`。
 
-### 部署步骤
+1. 一个 Cloudflare 账户。
+2. 本地安装 `Node.js 20+` 和 `npm`。
+3. （可选）一个你自己的域名，NS 已指向 Cloudflare。
 
-#### 1. 准备代码库
-- **Fork** 本项目，或者点击 **Use this template** 创建一个你自己的代码仓库。
-- 使用 `git clone` 将你的仓库克隆到本地。
+### 1. 获取代码并安装依赖
 
-#### 2. 配置 Cloudflare 服务
-登录 Cloudflare Dashboard，进行以下操作：
+```bash
+git clone https://github.com/Linkium-suki/onelink.git
+cd onelink
+npm install
+```
 
-- **创建 R2 存储桶**:
-  - 进入 R2 -> 创建存储桶。记下你的 **存储桶名称** (例如 `onelink-files`)。
-- **创建 KV 命名空间**:
-  - 进入 Workers & Pages -> KV -> 创建命名- 空间。记下你的 **命名空间名称** (例如 `ONELINK_KV`)。
-- **创建 Turnstile 站点**:
-  - 进入 Turnstile -> 添加站点。输入你的站点名称和域名，选择 "Invisible" 类型。记下 **Site Key** 和 **Secret Key**。
+### 2. 创建 Cloudflare 资源
 
-#### 3. 通过 Git 部署到 Cloudflare Pages
-这是最可靠的部署方式。
+```bash
+# 创建 KV 命名空间，把输出的 id 填进 wrangler.jsonc 的 kv_namespaces
+npx wrangler kv namespace create LINKS_KV
 
-1.  在 Cloudflare Dashboard, 进入 **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**。
-2.  选择你刚刚创建的 GitHub 仓库。
-3.  在 **Build settings** 页面:
-    - **Framework preset**: 选择 `None`。
-    - **Build command**: **留空**。
-    - **Build output directory**: 输入 `public`。
-4.  展开 **Environment Variables**，添加以下绑定和变量：
-    - **Bindings**:
-      - **KV Namespace Bindings**:
-        - Variable name: `LINKS_KV`
-        - KV namespace: 选择你创建的 `ONELINK_KV`。
-      - **R2 Bucket Bindings**:
-        - Variable name: `FILES_R2`
-        - R2 bucket: 选择你创建的 R2 存储桶。
-    - **Environment Variables (普通变量)**:
-      - `APP_URL`: `https://s.yourdomain.com` (替换为你的域名)
-    - **Secrets (加密变量)**:
-      - `TURNSTILE_SITE_KEY`: 粘贴你的 Turnstile **Site Key**。 *(注：这个 key 其实不敏感，但为保持一致性，也可作为 secret)*
-      - `TURNSTILE_SECRET_KEY`: 粘贴你的 Turnstile **Secret Key**。
-      - `ADMIN_SECRET`: 设置一个复杂的管理员密码。
-5.  点击 **Save and Deploy**。
+# 创建 R2 存储桶（名称需与 wrangler.jsonc 中一致，默认 onelink-files）
+npx wrangler r2 bucket create onelink-files
+```
 
-#### 4. 配置自定义域名
-- 部署成功后，进入新创建的 Pages 项目的 **Custom domains** 标签页。
-- 添加你的自定义域名，例如 `s.linkium.xyz`。
+再到 Dashboard → **Turnstile** 添加站点（选择 *Invisible*），记下 **Site Key** 与 **Secret Key**。
 
-**完成！你的 OneLink 服务现在已经在线上运行了！**
+### 3. 配置变量与密钥
+
+编辑 `wrangler.jsonc` 中的 `vars`：
+
+- `APP_URL`：你的短链域名（如 `https://s.yourdomain.com`），**留空则自动使用 Workers 默认域名**
+- `TURNSTILE_SITE_KEY`：Turnstile 的 Site Key（公开）
+
+用 wrangler 写入两个加密密钥：
+
+```bash
+npx wrangler secret put TURNSTILE_SECRET_KEY
+npx wrangler secret put ADMIN_SECRET        # 自定义一个复杂的管理员密码
+```
+
+### 4. 部署
+
+```bash
+npm run deploy
+```
+
+完成！访问输出的 `https://onelink.<你的子域>.workers.dev` 即可使用。### 5. 绑定自定义域名（可选）
+
+Dashboard → **Workers & Pages** → `onelink` → **Settings** → **Domains & Routes** 添加你的域名；或在 `wrangler.jsonc` 中配置 `routes`。
+
+> 💡 也可以在 Dashboard 里给这个 Worker 连接 Git 仓库（**Workers Builds**），实现 push 自动部署。
+>
+> 🔁 从旧版 Pages 迁移？旧数据在 KV/R2 中不受影响，把新 Worker 绑定到原域名即可无缝切换。
+
+---
+
+## 💻 本地开发
+
+```bash
+npm install
+npm run dev        # Vite 全栈开发服务器 http://localhost:5173（前端 HMR + Worker 本地运行）
+npm run build      # 类型检查 + 生产构建
+npm run preview    # 构建并在 Workers 运行时中预览产物
+npm run typecheck  # 仅类型检查
+```
+
+仓库自带 `.dev.vars`（已被 gitignore），使用 Cloudflare **官方测试密钥**，本地即可跑通 Turnstile 全流程；KV 与 R2 由 Miniflare 本地模拟，无需真实资源。
+
+| 键 | 本地值 | 行为 |
+| :--- | :--- | :--- |
+| `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | 前端永远通过 |
+| `TURNSTILE_SECRET_KEY` | `1x0000000000000000000000000000000AA` | 服务端永远通过 |
+| `ADMIN_SECRET` | `dev-admin-secret` | 本地管理员凭证 |
+
+---
+
+## 🔑 管理员 API
+
+所有管理接口需带请求头 `x-admin-secret: <ADMIN_SECRET>`。
+
+**创建分享**（`POST /api/create`）——携带该请求头即跳过 Turnstile 与速率限制，文件不受 24 小时限制：
+
+```bash
+curl -X POST "https://your-domain/api/create" \
+  -H "x-admin-secret: $ADMIN_SECRET" \
+  -F "type=link" -F "target=https://example.com" -F "expiry=never"
+```
+
+**查询分享**（不含密码字段）：
+
+```bash
+curl -H "x-admin-secret: $ADMIN_SECRET" "https://your-domain/api/admin/<code>"
+```
+
+**删除分享**（连同 R2 文件）：
+
+```bash
+curl -X DELETE -H "x-admin-secret: $ADMIN_SECRET" "https://your-domain/api/admin/<code>"
+```
+
+---
+
+## 📊 访问统计
+
+在任意短链接后加 `+`（例如 `https://s.yourdomain.com/xyz+`）即可查看该分享的访问次数、来源国家/地区与时间线。
 
 ---
 
@@ -154,9 +195,9 @@
 
 <div align="center">
   <p>
-    © 2024 Linkium · Forged with ❤️ and powered by caffeine.
+    © 2024-2026 Linkium · Forged with ❤️ and powered by caffeine.
   </p>
   <p>
-    <a href="https://github.com/Linkium-suki/OneLink">GitHub Repo</a>
+    <a href="https://github.com/Linkium-suki/onelink">GitHub Repo</a>
   </p>
 </div>

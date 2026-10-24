@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "onelink",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "not_found_handling": "none"
+  },
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "LINKS_KV",
+      "id": "6f01ab4498154c128da95e5aa4ea2904"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES_R2",
+      "bucket_name": "onelink-files"
+    }
+  ],
+  "vars": {
+    "APP_URL": "",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAABpUuSS5NWXiCyXD"
+  }
+}

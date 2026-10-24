@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneLink · Share everything with one link</title>
+    <meta name="description" content="免费、安全、优雅的万物分享服务：短链接、Markdown 消息、临时文件，100% 运行在 Cloudflare 免费套餐上。">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('onelink-theme');
+                var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.classList.add('dark');
+            } catch (e) { /* noop */ }
+        })();
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
